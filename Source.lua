@@ -33,14 +33,14 @@ local TS = game:GetService("TweenService")
 local TXS = game:GetService("TextService")
 local HS = game:GetService("HttpService")
 local MPS = game:GetService("MarketplaceService")
-local VG = game:GetService("CoreGui")
+local VG = Players.LocalPlayer:WaitForChild("PlayerGui")
 
 -- Variables
 
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
-local SelfModules = {UI = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularSVyixiu/UI-Library/refs/heads/main/UI.lua"))()}
+local SelfModules = {UI = require(script.Parent:FindFirstChild("UI.lua"))}
 local Storage = { Connections = {ForAuth = {}}, Tween = { Cosmetic = {} } }
 
 local ListenForInput = false
@@ -1223,158 +1223,89 @@ function Library:AddWindow(options)
 				end
 			end)
 
-			-- Button
+			function Section:AddButton(name1, callback1, options)
+				-- options = { Dual = true/false, Name2 = "Button 2 Name", Callback2 = function() end }
+				options = options or {}
+				local isDual = options.Dual == true
 
-			function Section:AddButton(name, callback)
 				local Button = {
-					Name = name,
 					Type = "Button",
-					Callback = callback,
+					Callback1 = callback1,
+					Callback2 = options.Callback2,
 				}
 
 				Button.Frame = SelfModules.UI.Create("Frame", {
-					Name = name,
+					Name = "ButtonFrame",
 					BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(15, 15, 15)),
 					Size = UDim2.new(1, 2, 0, 32),
-
-
-					SelfModules.UI.Create("Frame", {
-						Name = "Holder",
-						BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(5, 5, 5)),
-						Size = UDim2.new(1, -2, 1, -2),
-						Position = UDim2.new(0, 1, 0, 1),
-
-						SelfModules.UI.Create("TextButton", {
-							Name = "Button",
-							BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(15, 15, 15)),
-							Position = UDim2.new(0, 2, 0, 2),
-							Size = UDim2.new(1, -4, 1, -4),
-							AutoButtonColor = false,
-							Font = Enum.Font.SourceSans,
-							Text = name,
-							TextColor3 = Library.Theme.TextColor,
-							TextSize = 14,
-							TextWrapped = true,
-						}, UDim.new(0, 5)),
-					}, UDim.new(0, 5)),
 				}, UDim.new(0, 5))
 
-				-- Functions
+				local holderFrame = SelfModules.UI.Create("Frame", {
+					Name = "Holder",
+					BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(5, 5, 5)),
+					Size = UDim2.new(1, -2, 1, -2),
+					Position = UDim2.new(0, 1, 0, 1),
+				}, UDim.new(0, 5))
+				holderFrame.Parent = Button.Frame
 
-				local function buttonVisual()
-					task.spawn(function()
-						local Visual = SelfModules.UI.Create("Frame", {
-							Name = "Visual",
-							AnchorPoint = Vector2.new(0.5, 0.5),
-							BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-							BackgroundTransparency = 0.9,
-							Position = UDim2.new(0.5, 0, 0.5, 0),
-							Size = UDim2.new(0, 0, 1, 0),
-						}, UDim.new(0, 5))
+				local function createTextButton(btnName, callback, posScale, sizeScale)
+					local btn = SelfModules.UI.Create("TextButton", {
+						Name = btnName,
+						BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(15, 15, 15)),
+						Position = posScale,
+						Size = sizeScale,
+						AutoButtonColor = false,
+						Font = Enum.Font.SourceSans,
+						Text = btnName,
+						TextColor3 = Library.Theme.TextColor,
+						TextSize = 14,
+						TextWrapped = true,
+					}, UDim.new(0, 5))
 
-						Visual.Parent = Button.Frame.Holder.Button
-						tween(Visual, 0.5, { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1 })
-						task.wait(0.5)
-						Visual:Destroy()
+					btn.Parent = holderFrame
+
+					btn.MouseButton1Down:Connect(function()
+						tween(btn, 0.5, { TextSize = 12 })
+					end)
+
+					btn.MouseButton1Up:Connect(function()
+						tween(btn, 0.1, { TextSize = 14 })
+						task.spawn(function()
+							local Visual = SelfModules.UI.Create("Frame", {
+								Name = "Visual",
+								AnchorPoint = Vector2.new(0.5, 0.5),
+								BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+								BackgroundTransparency = 0.9,
+								Position = UDim2.new(0.5, 0, 0.5, 0),
+								Size = UDim2.new(0, 0, 1, 0),
+							}, UDim.new(0, 5))
+							Visual.Parent = btn
+							tween(Visual, 0.5, { Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1 })
+							task.wait(0.5)
+							Visual:Destroy()
+						end)
+
+						pcall(task.spawn, callback)
+					end)
+
+					btn.MouseLeave:Connect(function()
+						tween(btn, 0.5, { TextSize = 14 })
 					end)
 				end
 
-				-- Scripts
+				if isDual and options.Name2 and options.Callback2 then
+					-- Dual buttons with their own names
+					createTextButton(name1, callback1, UDim2.new(0, 2, 0, 2), UDim2.new(0.5, -4, 1, -4))
+					createTextButton(options.Name2, options.Callback2, UDim2.new(0.5, 2, 0, 2), UDim2.new(0.5, -4, 1, -4))
+				else
+					-- Single button
+					createTextButton(name1, callback1, UDim2.new(0, 2, 0, 2), UDim2.new(1, -4, 1, -4))
+				end
 
-				Section.List[#Section.List + 1] = Button
 				Button.Frame.Parent = Section.Frame.List
-
-				Button.Frame.Holder.Button.MouseButton1Down:Connect(function()
-					tween(Button.Frame.Holder.Button, 0.5, { TextSize = 12 })
-				end)
-
-				Button.Frame.Holder.Button.MouseButton1Up:Connect(function()
-					tween(Button.Frame.Holder.Button, 0.1, { TextSize = 14 })
-					buttonVisual()
-
-					pcall(task.spawn, Button.Callback)
-				end)
-
-				Button.Frame.Holder.Button.MouseLeave:Connect(function()
-					tween(Button.Frame.Holder.Button, 0.5, { TextSize = 14 })
-				end)
+				Section.List[#Section.List + 1] = Button
 
 				return Button
-			end
-
-			-- Switch
-
-			function Section:AddCurve(name, options, callback)
-				local Curve = {
-					Name = name,
-					Type = "Curve",
-					Callback = callback,
-				}
-
-				Curve.Frame = SelfModules.UI.Create("Frame", {
-					Name = name,
-					BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(15, 15, 15)),
-					Size = UDim2.new(1, 2, 0, 32),
-
-					SelfModules.UI.Create("Frame", {
-						Name = "Holder",
-						BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(5, 5, 5)),
-						Position = UDim2.new(0, 1, 0, 1),
-						Size = UDim2.new(1, -2, 1, -2),
-
-						SelfModules.UI.Create("TextLabel", {
-							Name = "Label",
-							BackgroundTransparency = 1,
-							Position = UDim2.new(0, 5, 0.5, -7),
-							Size = UDim2.new(1, -50, 0, 14),
-							Font = Enum.Font.SourceSans,
-							Text = name,
-							TextColor3 = Library.Theme.TextColor,
-							TextSize = 14,
-							TextWrapped = true,
-							TextXAlignment = Enum.TextXAlignment.Left,
-						}),
-
-						SelfModules.UI.Create("Frame", {
-							Name = "Indicator",
-							BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(15, 15, 15)),
-							Position = UDim2.new(1, -42, 0, 2),
-							Size = UDim2.new(0, 40, 0, 26),
-
-							SelfModules.UI.Create("Frame", {
-								Name = "Filler",
-								BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(15, 15, 15)),
-								Position = UDim2.new(0.5, 0, 0, 0),
-								Size = UDim2.new(0.5, 0, 1, 0)
-							}, UDim.new(0, 5)),
-
-							SelfModules.UI.Create("ImageLabel", {
-								Name = "Overlay",
-								BackgroundColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(25, 25, 25)),
-								ImageColor3 = Library.Theme.Accent.R >= 0.75 and Library.Theme.Accent.G >= 0.75 and Library.Theme.Accent.B >= 0.75 and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255),
-								Position = UDim2.new(0, 2, 0, 2),
-								Size = UDim2.new(0, 22, 0, 22),
-								Image = "http://www.roblox.com/asset/?id=7827504335",
-								ImageTransparency = 1,
-
-								SelfModules.UI.Create("ImageLabel", {
-									Name = "Glow",
-									BackgroundTransparency = 1,
-									Position = UDim2.new(0, -13, 0, -13),
-									Size = UDim2.new(1, 26, 1, 26),
-									Image = "rbxassetid://10822615828",
-									ImageColor3 = SelfModules.UI.Color.Add(Library.Theme.SectionColor, Color3.fromRGB(25, 25, 25)),
-									ScaleType = Enum.ScaleType.Slice,
-									SliceCenter = Rect.new(99, 99, 99, 99),
-									ImageTransparency = 0.5,
-									SliceScale = 0.2,
-								}),
-							}, UDim.new(1, 0)),
-						}, UDim.new(1, 0))
-					}, UDim.new(0, 5)),
-				}, UDim.new(0, 5))
-
-				return Curve
 			end
 
 			-- Toggle
